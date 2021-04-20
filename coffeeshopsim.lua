@@ -93,7 +93,7 @@ end
 
 function draw_credits()
 	rectfill(0, 0, 127, 127, 7)
-	print("v 0.2\n4-18-21\n\ncreated by\nchris 'turd boomerang'\narmstrong\n\n(🅾️+❎)", 12, 16, 12)
+	print("v 0.2\n4-18-21\n\ncreated by\nchris 'turd boomerang'\narmstrong\n\n(❎)", 12, 16, 12)
 end
 
 
@@ -243,23 +243,21 @@ function generate_recipe()
 	return recipe;
 end
 
-function setup_game()
-	right_drink = create_new_drink()
-	left_drink = create_new_drink()
+function create_new_window()
+	local new_window = {}
+	new_window.arrival_countdown = 60
+	new_window.customer_index = flr(rnd(4))
+	new_window.active_recipe = false
+	new_window.recipe_one = generate_recipe()
+	new_window.recipe_two = generate_recipe()
 	
-	window = {}
-	window.arrival_countdown = 60
-	window.customer_index = 0
-	window.active_recipe = false
-	window.recipe_one = generate_recipe()
-	window.recipe_two = generate_recipe()
+	new_window.eval_one = {}
+	new_window.evaluated_left = false
+	new_window.eval_two = {}
+	new_window.evaluated_right = false
+	new_window.calculated_drinks = false
 	
-	window.eval_one = {}
-	window.evaluated_left = false
-	window.eval_two = {}
-	window.evaluated_right = false
-	
-	window.update = function()
+	new_window.update = function()
 		window.arrival_countdown -=1
 		if ((player.x >= 7*8)
 		and (player.x < 9*8)
@@ -274,11 +272,24 @@ function setup_game()
 				right_drink = create_new_drink()
 				window.evaluated_right = true
 			end
+			
+			if ((window.evaluated_right)
+			and (window.evaluated_left)
+			and (not window.calculated_drinks))
+			then
+				window.calculated_drinks = true
+				local total_correct_count = window.eval_one.correct_count + window.eval_two.correct_count
+				
+				player.tips += total_correct_count*0.1
+				player.tips = round(player.tips, 2)
+				if (total_correct_count < 6) then
+					player.complaints += 1
+				end
+			end
 		end
-		--7,13
 	end
 	
-	window.draw = function()
+	new_window.draw = function()
 		spr(38 + 2*(window.customer_index%2) + 16*flr(window.customer_index/2), 56, 116)
 		spr(39 + 2*(window.customer_index%2) + 16*flr(window.customer_index/2), 64, 116)
 		
@@ -298,6 +309,14 @@ function setup_game()
 			print("and a "..window.recipe_two.text.." (❎)", 24, 84, 5)
 		end
 	end
+	
+	return new_window
+end
+
+function setup_game()
+	right_drink = create_new_drink()
+	left_drink = create_new_drink()
+	window = create_new_window()
 	
 	player = {}
 	player.x = 12*8
@@ -399,6 +418,10 @@ function setup_game()
 		right_drink.temp -= 0.02
 		if (left_drink.temp < 0) then left_drink.temp = 0 end
 		if (right_drink.temp < 0) then right_drink.temp = 0 end
+		
+		if ((window.calculated_drinks) and btnp(5)) then
+			window = create_new_window()
+		end
 	end
 	
 	player.draw = function()
@@ -477,14 +500,13 @@ function draw_game()
 	
 	print(player.selected_ingredient, hcenter(player.selected_ingredient), 9, 7)
 	
-	rectfill(2,116,22,124,7)
+	rectfill(2,116,28,124,7)
 	print("$"..tostring(player.tips), 3, 118, 11)
-	rectfill(104,116,126,124,7)
-	spr(34,106,118)
+	rectfill(96,116,126,124,7)
+	spr(34,100,118)
 	print(tostring(player.complaints), 113, 118, 8)
-	--print("complaints: "..tostring(player.complaints), 75, 118, 8)
 	
-	if ((window.evaluated_right) and (window.evaluated_left)) then
+	if (window.calculated_drinks) then
 		rectfill(16,16,112,112,7)
 		print("drinks: ", 20, 20, 5)
 		print(window.recipe_one.type.name.." / "..window.recipe_two.type.name, 20, 28, 5)
@@ -504,10 +526,26 @@ function draw_game()
 		print("fill: ", 20, 76, 5)
 		spr(34 - (window.eval_one.not_too_empty and 1 or 0),80,76)
 		spr(34 - (window.eval_two.not_too_empty and 1 or 0),92,76)
+		
+		print("tip: $"..round((window.eval_one.correct_count + window.eval_two.correct_count)*0.1, 2), 20, 88, 5)
+		
+		if (window.eval_one.correct_count + window.eval_two.correct_count < 6) then
+			print("too many mistakes!", 20, 96, 5)
+		else
+			print("nice job!", 20, 96, 5)
+		end
+		
+		print("❎ to continue", 20, 104, 5)
 	end
 end
 
 function hcenter(s)
 	--from pico8 fandom wiki
 	return 64 - #s*2
+end
+
+function round(num, numDecimalPlaces)
+	--from lua-users.org/wiki/SimpleRound
+	local mult = 10^(numDecimalPlaces or 0)
+	return flr(num * mult + 0.5) / mult
 end
