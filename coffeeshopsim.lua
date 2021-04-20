@@ -2,7 +2,7 @@
 --❎🅾️⬆️⬇️⬅️➡️
 function _init()
 	mode = 0
-	debug = true --CHANGE THIS BEFORE RELEASE
+	debug = false --CHANGE THIS BEFORE RELEASE
 end
 
 function _update()
@@ -25,10 +25,6 @@ function _draw()
 			local eval = evaluate_drink(left_drink, window.recipe_one)
 			
 			print("flavor: "..tostring(eval.correct_flavor).."\ningre: "..tostring(eval.correct_ingredients).."\nratio: "..tostring(eval.correct_ratio).."\ntemp: "..tostring(eval.not_too_cold).."\nfull: "..tostring(eval.not_too_empty), 4, 4, 0)
-			--"flavor: "..tostring(eval.correct_flavor).."\ningre: "..tostring(eval.correct_ingredients).."\nratio: "..tostring(eval.correct_ratio).."\ntemp: "..tostring(eval.not_too_cold).."\nfull: "..tostring(eval.not_too_empty)
-			
-			--correct_flavor, correct_ingredients, correct_ratio, not_too_cold, not_too_empty
-
 		end
 	end
 end
@@ -193,7 +189,7 @@ function evaluate_drink(drink, recipe)
 		end
 		ingredient_count += 1
 	end
-	if (ingredient_count > 0) then
+	if (ingredient_count > 1) then
 		if (abs(ratio - calculated_ratio) >= 0.2) then
 			evaluation.correct_ratio = false
 		end
@@ -201,6 +197,12 @@ function evaluate_drink(drink, recipe)
 	
 	evaluation.not_too_cold = (drink.temp > 0)
 	evaluation.not_too_empty = (drink.fill_count > 14)
+	
+	evaluation.correct_count = (evaluation.correct_flavor and 1 or 0)
+		+ (evaluation.correct_ingredients and 1 or 0)
+		+ (evaluation.correct_ratio and 1 or 0)
+		+ (evaluation.not_too_cold and 1 or 0)
+		+ (evaluation.not_too_empty and 1 or 0)
 	
 	return evaluation
 end
@@ -306,6 +308,8 @@ function setup_game()
 	player.flip_horizontal = false
 	player.selected_ingredient = ""
 	player.selected_temp = 0
+	player.tips = 0
+	player.complaints = 0
 	player.filling_left = false
 	player.filling_right = false
 	player.update = function()
@@ -386,6 +390,9 @@ function setup_game()
 			else
 				player.filling_right = false
 			end
+		else
+			player.filling_right = false
+			player.filling_left = false
 		end
 		
 		left_drink.temp -= 0.02
@@ -469,6 +476,35 @@ function draw_game()
 	player.draw()
 	
 	print(player.selected_ingredient, hcenter(player.selected_ingredient), 9, 7)
+	
+	rectfill(2,116,22,124,7)
+	print("$"..tostring(player.tips), 3, 118, 11)
+	rectfill(104,116,126,124,7)
+	spr(34,106,118)
+	print(tostring(player.complaints), 113, 118, 8)
+	--print("complaints: "..tostring(player.complaints), 75, 118, 8)
+	
+	if ((window.evaluated_right) and (window.evaluated_left)) then
+		rectfill(16,16,112,112,7)
+		print("drinks: ", 20, 20, 5)
+		print(window.recipe_one.type.name.." / "..window.recipe_two.type.name, 20, 28, 5)
+		
+		print("flavor: ", 20, 44, 5)
+		spr(34 - (window.eval_one.correct_flavor and 1 or 0),80,44)
+		spr(34 - (window.eval_two.correct_flavor and 1 or 0),92,44)
+		print("ingredients: ", 20, 52, 5)
+		spr(34 - (window.eval_one.correct_ingredients and 1 or 0),80,52)
+		spr(34 - (window.eval_two.correct_ingredients and 1 or 0),92,52)
+		print("ratio: ", 20, 60, 5)
+		spr(34 - (window.eval_one.correct_ratio and 1 or 0),80,60)
+		spr(34 - (window.eval_two.correct_ratio and 1 or 0),92,60)
+		print("temperature: ", 20, 68, 5)
+		spr(34 - (window.eval_one.not_too_cold and 1 or 0),80,68)
+		spr(34 - (window.eval_two.not_too_cold and 1 or 0),92,68)
+		print("fill: ", 20, 76, 5)
+		spr(34 - (window.eval_one.not_too_empty and 1 or 0),80,76)
+		spr(34 - (window.eval_two.not_too_empty and 1 or 0),92,76)
+	end
 end
 
 function hcenter(s)
