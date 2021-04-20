@@ -2,7 +2,7 @@
 --❎🅾️⬆️⬇️⬅️➡️
 function _init()
 	mode = 0
-	debug = false --CHANGE THIS BEFORE RELEASE
+	debug = true --CHANGE THIS BEFORE RELEASE
 end
 
 function _update()
@@ -19,7 +19,18 @@ function _draw()
 	elseif (mode == 1) then draw_menu()
 	elseif (mode == 2) then draw_credits()
 	elseif (mode == 3) then draw_game() end
-	if (debug) then if (mode == 3) then print(tostr(player.x)..", "..tostr(player.y),4,4,0) end end
+	
+	if (debug) then
+		if (mode == 3) then 
+			local eval = evaluate_drink(left_drink, window.recipe_one)
+			
+			print("flavor: "..tostring(eval.correct_flavor).."\ningre: "..tostring(eval.correct_ingredients).."\nratio: "..tostring(eval.correct_ratio).."\ntemp: "..tostring(eval.not_too_cold).."\nfull: "..tostring(eval.not_too_empty), 4, 4, 0)
+			--"flavor: "..tostring(eval.correct_flavor).."\ningre: "..tostring(eval.correct_ingredients).."\nratio: "..tostring(eval.correct_ratio).."\ntemp: "..tostring(eval.not_too_cold).."\nfull: "..tostring(eval.not_too_empty)
+			
+			--correct_flavor, correct_ingredients, correct_ratio, not_too_cold, not_too_empty
+
+		end
+	end
 end
 
 function title()
@@ -86,7 +97,7 @@ end
 
 function draw_credits()
 	rectfill(0, 0, 127, 127, 7)
-	print("v 0.1\n3-10-21\n\ncreated by\nchris 'turd boomerang'\narmstrong\n\n(❎+🅾️)", 12, 16, 12)
+	print("v 0.2\n4-18-21\n\ncreated by\nchris 'turd boomerang'\narmstrong\n\n(🅾️+❎)", 12, 16, 12)
 end
 
 
@@ -111,6 +122,88 @@ bev_type =
 		ingredients = {milk = 3, chai = 1}}
 }
 
+function create_new_drink()
+	local drink = {}
+	drink.ingredients = {
+		water = 0,
+		coffee = 0,
+		espresso = 0,
+		milk = 0,
+		sugar = 0,
+		cocoa = 0,
+		caramel = 0,
+		maple = 0,
+		chai = 0
+	}
+	drink.fill_count = 0 --min 0, max 16
+	drink.temp = 0 -- min 0, max 10
+	
+	return drink
+end
+
+function evaluate_drink(drink, recipe)
+	
+	local evaluation = {}
+	--correct_flavor, correct_ingredients, correct_ratio, not_too_cold, not_too_empty
+	
+	if (recipe.has_flavor) then
+		evaluation.correct_flavor = drink.ingredients[recipe.flavor] > 0
+	else
+		evaluation.correct_flavor = 
+			((drink.ingredients.sugar == 0)
+			and (drink.ingredients.cocoa == 0)
+			and (drink.ingredients.caramel == 0)
+			and (drink.ingredients.maple == 0))
+	end
+	
+	
+	evaluation.correct_ingredients = true
+	--for each ingredient in the drink
+
+	for i, v in pairs(drink.ingredients) do
+		if (v > 0) then 
+			local good_ingredient = false
+			if (recipe.has_flavor) then
+				if (recipe.flavor == i) then
+					good_ingredient = true
+				end
+			end
+			for ri, rr in pairs(recipe.type.ingredients) do
+				if (ri == i) then
+					good_ingredient = true
+				end
+			end
+			if (not good_ingredient) then
+				evaluation.correct_ingredients = false
+			end
+		end
+	end
+	
+	evaluation.correct_ratio = true
+	local ingredient_count = 0
+	local ratio = 0
+	local calculated_ratio = 0
+	for i, c in pairs(recipe.type.ingredients) do
+		if (ingredient_count == 0) then
+			ratio = c
+			calculated_ratio = drink.ingredients[i]
+		else
+			ratio = ratio/c
+			calculated_ratio = calculated_ratio / drink.ingredients[i]
+		end
+		ingredient_count += 1
+	end
+	if (ingredient_count > 0) then
+		if (abs(ratio - calculated_ratio) >= 0.2) then
+			evaluation.correct_ratio = false
+		end
+	end
+	
+	evaluation.not_too_cold = (drink.temp > 0)
+	evaluation.not_too_empty = (drink.fill_count > 14)
+	
+	return evaluation
+end
 function generate_recipe()
 	local recipe = {}
 	recipe.type = rnd(bev_type)
@@ -159,8 +252,28 @@ function setup_game()
 	window.recipe_one = generate_recipe()
 	window.recipe_two = generate_recipe()
 	
+	window.eval_one = {}
+	window.evaluated_left = false
+	window.eval_two = {}
+	window.evaluated_right = false
+	
 	window.update = function()
 		window.arrival_countdown -=1
+		if ((player.x >= 7*8)
+		and (player.x < 9*8)
+		and (player.y >= 12.5*8)) then
+			if (left_drink.fill_count > 0) then
+				window.eval_one = evaluate_drink(left_drink, window.recipe_one)
+				left_drink = create_new_drink()
+				window.evaluated_left = true
+			end
+			if (right_drink.fill_count > 0) then
+				window.eval_two = evaluate_drink(right_drink, window.recipe_two)
+				right_drink = create_new_drink()
+				window.evaluated_right = true
+			end
+		end
+		--7,13
 	end
 	
 	window.draw = function()
@@ -179,8 +292,8 @@ function setup_game()
 			line(60, 104, 64, 110, 5)
 			line(64, 104, 5)
 			
-			print("i want a "..window.recipe_one.text, 24, 60, 5)
-			print("and a "..window.recipe_two.text, 24, 84, 5)
+			print("i want a "..window.recipe_one.text.." (🅾️)", 24, 60, 5)
+			print("and a "..window.recipe_two.text.." (❎)", 24, 84, 5)
 		end
 	end
 	
@@ -226,7 +339,7 @@ function setup_game()
 				player.selected_ingredient = "water"
 				player.selected_temp = 3
 			elseif (abs(player.x-40) <= 4) then
-				player.selected_ingredient = "slow-drip coffee"
+				player.selected_ingredient = "coffee"
 				player.selected_temp = 8
 			elseif (abs(player.x-56) <= 4) then 
 				player.selected_ingredient = "espresso" 
@@ -257,28 +370,28 @@ function setup_game()
 		end
 		
 		if (player.selected_ingredient != "") then
-			if ((btn(4)) and (left_drink["fill_count"] < 16)) then
-				left_drink[player.selected_ingredient] += 0.2
-				left_drink["temp"] = (left_drink["temp"]*left_drink["fill_count"] + player.selected_temp*0.2) / (left_drink["fill_count"]+0.2)
-				left_drink["fill_count"] += 0.2
+			if ((btn(4)) and (left_drink.fill_count < 16)) then
+				left_drink.ingredients[player.selected_ingredient] += 0.2
+				left_drink.temp = (left_drink.temp*left_drink.fill_count + player.selected_temp*0.2) / (left_drink.fill_count+0.2)
+				left_drink.fill_count += 0.2
 				player.filling_left = true
 			else
 				player.filling_left = false
 			end
-			if ((btn(5)) and (right_drink["fill_count"] < 16))  then
-				right_drink[player.selected_ingredient] += 0.2
-				right_drink["temp"] = (right_drink["temp"]*right_drink["fill_count"] + player.selected_temp*0.2) / (right_drink["fill_count"]+0.2)
-				right_drink["fill_count"] += 0.2
+			if ((btn(5)) and (right_drink.fill_count < 16))  then
+				right_drink.ingredients[player.selected_ingredient] += 0.2
+				right_drink.temp = (right_drink.temp*right_drink.fill_count + player.selected_temp*0.2) / (right_drink.fill_count+0.2)
+				right_drink.fill_count += 0.2
 				player.filling_right = true
 			else
 				player.filling_right = false
 			end
 		end
 		
-		left_drink["temp"] -= 0.02
-		right_drink["temp"] -= 0.02
-		if (left_drink["temp"] < 0) then left_drink["temp"] = 0 end
-		if (right_drink["temp"] < 0) then right_drink["temp"] = 0 end
+		left_drink.temp -= 0.02
+		right_drink.temp -= 0.02
+		if (left_drink.temp < 0) then left_drink.temp = 0 end
+		if (right_drink.temp < 0) then right_drink.temp = 0 end
 	end
 	
 	player.draw = function()
@@ -297,28 +410,11 @@ function game()
 	window.update()
 end
 
-function create_new_drink()
-	local drink = {}
-	drink["water"] = 0
-	drink["slow-drip coffee"] = 0
-	drink["espresso"] = 0
-	drink["milk"] = 0
-	drink["sugar"] = 0
-	drink["cocoa"] = 0
-	drink["caramel"] = 0
-	drink["maple"] = 0
-	drink["chai"] = 0
-	drink["fill_count"] = 0 --min 0, max 16
-	drink["temp"] = 0 -- min 0, max 10
-	
-	return drink
-end
-
 function draw_game()
 	rectfill(0, 0, 127, 127, 7)
 	
-	rectfill(116, 52-right_drink["fill_count"], 124, 52, 1) --rightDrink
-	rectfill(4, 52-left_drink["fill_count"], 12, 52, 1) --leftDrink
+	rectfill(116, 52-right_drink.fill_count, 124, 52, 1) --rightDrink
+	rectfill(4, 52-left_drink.fill_count, 12, 52, 1) --leftDrink
 	
 	if (player.filling_right) then
 		rectfill(120, 32, 120, 52, 1) --rightDrink
@@ -330,29 +426,49 @@ function draw_game()
 	map(0, 0, 0, 0)
 	
 	--draw mirrored coffee hand
-	spr(11, 8, 32, 1, 1, true, false)
-	spr(27, 8, 40, 1, 1, true, false)
-	spr(43, 8, 48, 1, 1, true, false)
-	spr(12, 0, 32, 1, 1, true, false)
-	spr(28, 0, 40, 1, 1, true, false)
-	spr(44, 0, 48, 1, 1, true, false)
+	if (not window.evaluated_left) then
+		spr(11, 8, 32, 1, 1, true, false)
+		spr(27, 8, 40, 1, 1, true, false)
+		spr(43, 8, 48, 1, 1, true, false)
+		spr(12, 0, 32, 1, 1, true, false)
+		spr(28, 0, 40, 1, 1, true, false)
+		spr(44, 0, 48, 1, 1, true, false)
+		
+		--themometer
+		spr(32, 4, 72)
+		rectfill(6, 60, 9, 72, 7)
+		rectfill(7, 72-left_drink["temp"], 8, 72, 8)
+		
+		print("🅾️", 4, 24, 7)
+	else
+		spr(1, 8, 32, 1, 1, true, false)
+		spr(1, 8, 40, 1, 1, true, false)
+		spr(1, 8, 48, 1, 1, true, false)
+		spr(1, 0, 32, 1, 1, true, false)
+		spr(1, 0, 40, 1, 1, true, false)
+		spr(1, 0, 48, 1, 1, true, false)
+	end
 	
-	--themometers
-	spr(32, 4, 72)
-	rectfill(6, 60, 9, 72, 7)
-	rectfill(7, 72-left_drink["temp"], 8, 72, 8)
-	
-	spr(32, 116, 72)
-	rectfill(118, 60, 121, 72, 7)
-	rectfill(119, 72-right_drink["temp"], 120, 72, 8)
-	
+	if (window.evaluated_right) then
+		spr(1, 112, 32, 1, 1, true, false)
+		spr(1, 112, 40, 1, 1, true, false)
+		spr(1, 112, 48, 1, 1, true, false)
+		spr(1, 120, 32, 1, 1, true, false)
+		spr(1, 120, 40, 1, 1, true, false)
+		spr(1, 120, 48, 1, 1, true, false)
+	else
+		--themometer
+		spr(32, 116, 72)
+		rectfill(118, 60, 121, 72, 7)
+		rectfill(119, 72-right_drink["temp"], 120, 72, 8)
+		
+		print("❎", 118, 24, 7)
+	end
+
 	window.draw()
 	player.draw()
 	
 	print(player.selected_ingredient, hcenter(player.selected_ingredient), 9, 7)
-	
-	print("🅾️", 4, 24, 7)
-	print("❎", 118, 24, 7)
 end
 
 function hcenter(s)
