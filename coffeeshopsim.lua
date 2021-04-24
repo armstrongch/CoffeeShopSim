@@ -180,14 +180,19 @@ function evaluate_drink(drink, recipe)
 	local ratio = 0
 	local calculated_ratio = 0
 	for i, c in pairs(recipe.type.ingredients) do
-		if (ingredient_count == 0) then
-			ratio = c
-			calculated_ratio = drink.ingredients[i]
-		else
-			ratio = ratio/c
-			calculated_ratio = calculated_ratio / drink.ingredients[i]
+		if ((drink.ingredients[i] != "cocoa")
+		and (drink.ingredients[i] != "caramel")
+		and (drink.ingredients[i] != "maple")
+		and (drink.ingredients[i] != "sugar")) then
+			if (ingredient_count == 0) then
+				ratio = c
+				calculated_ratio = drink.ingredients[i]
+			else
+				ratio = ratio/c
+				calculated_ratio = calculated_ratio / drink.ingredients[i]
+			end
+			ingredient_count += 1
 		end
-		ingredient_count += 1
 	end
 	if (ingredient_count > 1) then
 		if (abs(ratio - calculated_ratio) >= 0.2) then
@@ -282,7 +287,7 @@ function create_new_window()
 				
 				player.tips += total_correct_count*0.1
 				player.tips = round(player.tips, 2)
-				if (total_correct_count < 6) then
+				if (total_correct_count < 7) then
 					player.complaints += 1
 				end
 			end
@@ -319,6 +324,8 @@ function setup_game()
 	window = create_new_window()
 	
 	player = {}
+	player.second_hand = 0
+	player.minute_hand = 0
 	player.x = 12*8
 	player.y = 5*8
 	player.walkspeed = 1
@@ -422,6 +429,11 @@ function setup_game()
 		if ((window.calculated_drinks) and btnp(5)) then
 			window = create_new_window()
 		end
+		
+		player.second_hand += 1/30
+		player.minute_hand += 1/1800
+		--if (player.second_hand >= 60) then player.second_hand = 0 end
+		--if (player.minute_hand >= 60) then player.minute_hand = 0 end
 	end
 	
 	player.draw = function()
@@ -432,6 +444,21 @@ function setup_game()
 		else
 			spr(17, player.x, player.y, 1, 1, player.flip_horizontal, false)
 		end
+		
+		--Clock
+		spr(35, 112, 0, 1,1,false,false)
+		spr(35, 120, 0, 1,1,true,false)
+		spr(35, 112, 8, 1,1,false,true)
+		spr(35, 120, 8, 1,1,true,true)
+		
+		line(120, 8,
+			120 - sin(0.5-player.minute_hand/60)*4,
+			8 + cos(0.5-player.minute_hand/60)*4, 2)
+		
+		line(120, 8,
+			120 - sin(0.5-player.second_hand/60)*6,
+			8 + cos(0.5-player.second_hand/60)*6, 2)
+		
 	end
 end
 
