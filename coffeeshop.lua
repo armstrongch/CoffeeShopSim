@@ -187,10 +187,10 @@ function create_new_window()
 				window.calculated_drinks = true
 				local total_correct_count = window.eval_one.correct_count + window.eval_two.correct_count
 				
-				player.tips += total_correct_count*0.1
-				player.tips = round(player.tips, 2)
+				control.tips += total_correct_count*0.1
+				control.tips = round(control.tips, 2)
 				if (total_correct_count < 7) then
-					player.complaints += 1
+					control.complaints += 1
 				end
 			end
 		end
@@ -220,14 +220,12 @@ function create_new_window()
 	return new_window
 end
 
-function setup_game()
+function setup_shop()
 	right_drink = create_new_drink()
 	left_drink = create_new_drink()
 	window = create_new_window()
 	
 	player = {}
-	player.second_hand = 0
-	player.minute_hand = 0
 	player.x = 12*8
 	player.y = 5*8
 	player.walkspeed = 1
@@ -236,8 +234,6 @@ function setup_game()
 	player.flip_horizontal = false
 	player.selected_ingredient = ""
 	player.selected_temp = 0
-	player.tips = 0
-	player.complaints = 0
 	player.filling_left = false
 	player.filling_right = false
 	player.update = function()
@@ -332,10 +328,6 @@ function setup_game()
 			window = create_new_window()
 		end
 		
-		player.second_hand += 1/30
-		player.minute_hand += 1/1800
-		--if (player.second_hand >= 60) then player.second_hand = 0 end
-		--if (player.minute_hand >= 60) then player.minute_hand = 0 end
 	end
 	
 	player.draw = function()
@@ -354,22 +346,24 @@ function setup_game()
 		spr(35, 120, 8, 1,1,true,true)
 		
 		line(120, 8,
-			120 - sin(0.5-player.minute_hand/60)*4,
-			8 + cos(0.5-player.minute_hand/60)*4, 2)
+			120 - sin(0.5-control.minute_hand/60)*4,
+			8 + cos(0.5-control.minute_hand/60)*4, 2)
 		
 		line(120, 8,
-			120 - sin(0.5-player.second_hand/60)*6,
-			8 + cos(0.5-player.second_hand/60)*6, 2)
+			120 - sin(0.5-control.second_hand/60)*6,
+			8 + cos(0.5-control.second_hand/60)*6, 2)
 		
 	end
 end
 
-function game()
+function shop()
 	player.update()
 	window.update()
+	control.second_hand += 1/30
+	control.minute_hand += 1/1800
 end
 
-function draw_game()
+function draw_shop()
 	rectfill(0, 0, 127, 127, 7)
 	
 	rectfill(116, 52-right_drink.fill_count, 124, 52, 1) --rightDrink
@@ -430,10 +424,10 @@ function draw_game()
 	print(player.selected_ingredient, hcenter(player.selected_ingredient), 9, 7)
 	
 	rectfill(2,116,28,124,7)
-	print("$"..tostring(player.tips), 3, 118, 11)
+	print("$"..tostring(control.tips), 3, 118, 11)
 	rectfill(96,116,126,124,7)
 	spr(34,100,118)
-	print(tostring(player.complaints), 113, 118, 8)
+	print(tostring(control.complaints), 113, 118, 8)
 	
 	if (window.calculated_drinks) then
 		rectfill(16,16,112,112,7)
