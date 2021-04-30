@@ -359,8 +359,7 @@ end
 function shop()
 	player.update()
 	window.update()
-	control.second_hand += 1/30
-	control.minute_hand += 1/1800
+	control.add_seconds(1/30)
 end
 
 function draw_shop()

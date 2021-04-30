@@ -14,7 +14,12 @@ end
 
 function commute()
 	if (btnp(5)) then show_commute_ui = not show_commute_ui end
-	
+	if (btnp(4)) then 
+		if (commute_dialog_action == "work") then
+			setup_shop()
+			mode = 3
+		end
+	end
 	local successful_move = false
 	local move_x_change = 0
 	local move_y_change = 0
@@ -52,12 +57,12 @@ function commute()
 			control.gas -= 1
 			control.car_commute_location_x += move_x_change
 			control.car_commute_location_y += move_y_change
-			control.minute_hand -= 1
+			control.add_seconds(-1)
 		end
 		--move the player
 		control.player_commute_location_x += move_x_change
 		control.player_commute_location_y += move_y_change
-		control.minute_hand += 2
+		control.add_seconds(2)
 		
 		show_commute_dialog = false
 		commute_dialog_action = "none"
